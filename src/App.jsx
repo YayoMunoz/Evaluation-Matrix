@@ -63,6 +63,7 @@ function applySortFilter(list,search,statusFilter,clientFilter,sortCol,sortDir){
     if(sortCol==="num") cmp=(a.positionNumber||"").localeCompare(b.positionNumber||"",undefined,{numeric:true});
     else if(sortCol==="name") cmp=a.name.localeCompare(b.name);
     else if(sortCol==="client") cmp=(a.clientName||"").localeCompare(b.clientName||"");
+    else if(sortCol==="status") cmp=(a.status||"activa").localeCompare(b.status||"activa");
     return sortDir==="asc"?cmp:-cmp;
   });
 }
@@ -447,7 +448,9 @@ function Home({matrices,onSelect,onCreate,onDelete,onStatusChange}){
             <button onClick={()=>handleColSort("client")} style={{flex:1,background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:2,color:sortCol==="client"?B.blue:B.textLight,fontSize:11,textTransform:"uppercase",letterSpacing:1,fontWeight:700,fontFamily:"inherit",padding:0,textAlign:"left"}}>
               Client <SortIcon active={sortCol==="client"} dir={sortDir}/>
             </button>
-            <div style={{flexShrink:0,minWidth:60,color:B.textLight,fontSize:11,textTransform:"uppercase",letterSpacing:1,fontWeight:700}}>Status</div>
+            <button onClick={()=>handleColSort("status")} style={{flexShrink:0,minWidth:60,background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:2,color:sortCol==="status"?B.blue:B.textLight,fontSize:11,textTransform:"uppercase",letterSpacing:1,fontWeight:700,fontFamily:"inherit",padding:0}}>
+              Status <SortIcon active={sortCol==="status"} dir={sortDir}/>
+            </button>
             <div style={{textAlign:"center",flexShrink:0,minWidth:80,color:B.textLight,fontSize:11,textTransform:"uppercase",letterSpacing:1,fontWeight:700}}>Candidates</div>
             <div style={{textAlign:"center",flexShrink:0,minWidth:80,color:B.textLight,fontSize:11,textTransform:"uppercase",letterSpacing:1,fontWeight:700}}>Best score</div>
             <div style={{width:28,flexShrink:0}}/>
