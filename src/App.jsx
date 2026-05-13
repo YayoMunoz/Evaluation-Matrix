@@ -295,7 +295,7 @@ function MatrixRow({m,onSelect,onDelete}){
         </div>}
       </div>
       <div style={{display:"flex",gap:28,flexShrink:0,alignItems:"center"}}>
-        {[{label:"Candidates",value:cands.length},{label:"Best score",value:best!==null?`${best}%`:"—",color:best!==null?B.green:B.textLight}].map((s,i)=>(
+        {[{label:"Candidates",value:cands.length},{label:"Score",value:best!==null?`${best}%`:"—",color:best!==null?B.green:B.textLight}].map((s,i)=>(
           <div key={i} style={{textAlign:"center"}}>
             <div style={{color:B.textLight,fontSize:10,textTransform:"uppercase",letterSpacing:1,marginBottom:2}}>{s.label}</div>
             <div style={{color:s.color||B.textDark,fontWeight:800,fontSize:14,fontFamily:"'DM Mono',monospace"}}>{s.value}</div>
@@ -444,8 +444,8 @@ function Home({matrices,onSelect,onCreate,onDelete,onStatusChange}){
               Position <SortIcon active={sortCol==="name"} dir={sortDir}/>
             </button>
             <div style={{display:"flex",gap:28,paddingRight:140}}>
-              {["Candidates","Best score"].map(h=>(
-                <div key={h} style={{width:70,textAlign:"center",color:B.textLight,fontSize:11,textTransform:"uppercase",letterSpacing:1}}>{h}</div>
+              {["Candidates","Score"].map(h=>(
+                <div key={h} style={{width:70,textAlign:"center",color:B.textLight,fontSize:11,textTransform:"uppercase",letterSpacing:1,whiteSpace:"nowrap"}}>{h}</div>
               ))}
             </div>
           </div>
