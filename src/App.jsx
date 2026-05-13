@@ -1144,7 +1144,7 @@ export default function App(){
     <div style={{minHeight:"100vh",background:B.bg,color:B.textDark,fontFamily:"'Sora','Segoe UI',sans-serif",display:"flex",flexDirection:"column"}}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800;900&family=DM+Mono:wght@400;500&display=swap');*{box-sizing:border-box}input:focus{border-color:${B.blue}!important;box-shadow:0 0 0 3px ${B.blue}22!important}button{transition:opacity 0.15s}button:hover{opacity:0.85}::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:${B.blueLight}}::-webkit-scrollbar-thumb{background:${B.border};border-radius:3px}`}</style>
 
-      <div style={{background:B.white,borderBottom:`1px solid ${B.border}`,padding:"0 32px",display:"flex",alignItems:"center",gap:12,height:60,boxShadow:`0 1px 8px ${B.blue}10`}}>
+      <div style={{background:B.white,borderBottom:`1px solid ${B.border}`,padding:"0 32px",display:"flex",alignItems:"center",gap:12,height:60,boxShadow:`0 1px 8px ${B.blue}10`,width:"100%"}}>
         <button onClick={()=>setView("home")} style={{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:10,padding:"6px 0"}}>
           <WexpandLogo size={34}/>
           <div style={{display:"flex",flexDirection:"column",alignItems:"flex-start"}}>
@@ -1162,7 +1162,7 @@ export default function App(){
         </div>
       </div>
 
-      <div style={{padding:"32px 24px",maxWidth:"100%",flex:1,width:"100%"}}>
+      <div style={{padding:"32px 40px",flex:1,width:"100%",boxSizing:"border-box"}}>
         {view==="home"&&<Home matrices={matrices} onSelect={id=>{setActiveMatrixId(id);setView("detail");}} onCreate={()=>{setActiveMatrixId(null);setView("newMatrix");}} onDelete={handleDeleteMatrix} onStatusChange={handleStatusChange}/>}
         {view==="newMatrix"&&(
           <><div style={{marginBottom:24}}><h2 style={{margin:0,color:B.textDark,fontSize:24,fontWeight:900}}>New Evaluation Matrix</h2><p style={{color:B.textMid,margin:"5px 0 0",fontSize:14}}>Enter the position number, client and name, then define the criteria.</p></div>
