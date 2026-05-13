@@ -295,7 +295,7 @@ function MatrixRow({m,onSelect,onDelete}){
         </div>}
       </div>
       <div style={{display:"flex",gap:28,flexShrink:0,alignItems:"center"}}>
-        {[{label:"Candidates",value:cands.length},{label:"Score",value:best!==null?`${best}%`:"—",color:best!==null?B.green:B.textLight}].map((s,i)=>(
+        {[{label:"Candidates",value:cands.length},{label:"Best score",value:best!==null?`${best}%`:"—",color:best!==null?B.green:B.textLight}].map((s,i)=>(
           <div key={i} style={{textAlign:"center"}}>
             <div style={{color:B.textLight,fontSize:10,textTransform:"uppercase",letterSpacing:1,marginBottom:2}}>{s.label}</div>
             <div style={{color:s.color||B.textDark,fontWeight:800,fontSize:14,fontFamily:"'DM Mono',monospace"}}>{s.value}</div>
@@ -311,7 +311,7 @@ function MatrixRow({m,onSelect,onDelete}){
 
 // ─── HOME ─────────────────────────────────────────────────────────────────────
 function Home({matrices,onSelect,onCreate,onDelete,onStatusChange}){
-  const [displayMode,setDisplayMode]=useState("kanban");
+  const [displayMode,setDisplayMode]=useState("list");
   const [search,setSearch]=useState("");
   const [statusFilter,setStatusFilter]=useState("all");
   const [clientFilter,setClientFilter]=useState("all");
@@ -435,20 +435,6 @@ function Home({matrices,onSelect,onCreate,onDelete,onStatusChange}){
         </div>
       ):(
         <div style={{display:"flex",flexDirection:"column",gap:8}}>
-          <div style={{display:"flex",alignItems:"center",padding:"4px 20px 8px",borderBottom:`1px solid ${B.border}`,gap:14}}>
-            <button onClick={()=>handleColSort("num")} style={{width:52,flexShrink:0,background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:2,color:sortCol==="num"?B.blue:B.textLight,fontSize:11,textTransform:"uppercase",letterSpacing:1,fontWeight:700,fontFamily:"inherit",padding:0}}>
-              # <SortIcon active={sortCol==="num"} dir={sortDir}/>
-            </button>
-            <div style={{width:34,flexShrink:0}}/>
-            <button onClick={()=>handleColSort("name")} style={{flex:1,background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:2,color:sortCol==="name"?B.blue:B.textLight,fontSize:11,textTransform:"uppercase",letterSpacing:1,fontWeight:700,fontFamily:"inherit",padding:0,textAlign:"left"}}>
-              Position <SortIcon active={sortCol==="name"} dir={sortDir}/>
-            </button>
-            <div style={{display:"flex",gap:28,paddingRight:140}}>
-              {["Candidates","Score"].map(h=>(
-                <div key={h} style={{width:70,textAlign:"center",color:B.textLight,fontSize:11,textTransform:"uppercase",letterSpacing:1,whiteSpace:"nowrap"}}>{h}</div>
-              ))}
-            </div>
-          </div>
           {filtered.map(m=><MatrixRow key={m.id} m={m} onSelect={onSelect} onDelete={onDelete}/>)}
         </div>
       )}
