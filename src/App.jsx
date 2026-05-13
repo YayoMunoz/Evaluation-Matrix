@@ -69,7 +69,7 @@ function uid(){return Math.random().toString(36).slice(2,9);}
 function buildEmptyCategories(){
   return CAT_CONFIG.map(cfg=>({
     id:cfg.id,name:cfg.name,
-    criteria:Array.from({length:cfg.min},()=>({id:uid(),description:""})),
+    criteria:Array.from({length:cfg.min},()=>({id:uid(),description:"",question:""})),
   }));
 }
 function calcScore(scores,categories){
@@ -517,6 +517,9 @@ function MatrixBuilder({matrix,onSave,onCancel}){
   function updateDesc(catId,crId,value){
     setCategories(cats=>cats.map(cat=>cat.id===catId?{...cat,criteria:cat.criteria.map(cr=>cr.id===crId?{...cr,description:value}:cr)}:cat));
   }
+  function updateQuestion(catId,crId,value){
+    setCategories(cats=>cats.map(cat=>cat.id===catId?{...cat,criteria:cat.criteria.map(cr=>cr.id===crId?{...cr,question:value}:cr)}:cat));
+  }
   function handleSave(){
     if(!positionNumber.trim()) return alert("Please enter a position number.");
     if(!clientName.trim()) return alert("Please enter the client name.");
@@ -583,20 +586,28 @@ function MatrixBuilder({matrix,onSave,onCancel}){
                 :<button onClick={()=>addCriterion(cat.id)} style={{...btnSm,background:B.white,color:accent,border:`1.5px solid ${accent}`}}>+ Criterion</button>
               }
             </div>
-            <div style={{padding:"8px 12px",display:"flex",flexDirection:"column",gap:6}}>
+            <div style={{padding:"8px 12px",display:"flex",flexDirection:"column",gap:8}}>
               {cat.criteria.map((cr,idx)=>(
-                <div key={cr.id} style={{display:"flex",gap:8,alignItems:"center"}}>
-                  <div style={{width:22,height:22,borderRadius:"50%",background:bg,border:`1.5px solid ${accent}55`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                    <span style={{color:accent,fontSize:10,fontWeight:800}}>{idx+1}</span>
+                <div key={cr.id} style={{display:"flex",flexDirection:"column",gap:6,background:B.bg,borderRadius:8,padding:"10px 12px"}}>
+                  <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                    <div style={{width:22,height:22,borderRadius:"50%",background:bg,border:`1.5px solid ${accent}55`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                      <span style={{color:accent,fontSize:10,fontWeight:800}}>{idx+1}</span>
+                    </div>
+                    <input value={cr.description} onChange={e=>updateDesc(cat.id,cr.id,e.target.value)}
+                      placeholder={`${cat.name} criterion ${idx+1}...`}
+                      style={{...inputBase,flex:1}}/>
+                    <span style={{color:B.textLight,fontSize:11,fontFamily:"'DM Mono',monospace",flexShrink:0,width:46,textAlign:"right",fontWeight:700}}>{Math.round((cfg.pool/cat.criteria.length)*1000)/10}%</span>
+                    {!cfg.fixed&&!atMin
+                      ?<button onClick={()=>deleteCriterion(cat.id,cr.id)} style={{color:B.textLight,background:"none",border:"none",cursor:"pointer",fontSize:20,lineHeight:1,padding:"0 4px",flexShrink:0}}>×</button>
+                      :<div style={{width:24,flexShrink:0}}/>
+                    }
                   </div>
-                  <input value={cr.description} onChange={e=>updateDesc(cat.id,cr.id,e.target.value)}
-                    placeholder={`${cat.name} criterion ${idx+1}...`}
-                    style={{...inputBase,flex:1}}/>
-                  <span style={{color:B.textLight,fontSize:11,fontFamily:"'DM Mono',monospace",flexShrink:0,width:46,textAlign:"right",fontWeight:700}}>{Math.round((cfg.pool/cat.criteria.length)*1000)/10}%</span>
-                  {!cfg.fixed&&!atMin
-                    ?<button onClick={()=>deleteCriterion(cat.id,cr.id)} style={{color:B.textLight,background:"none",border:"none",cursor:"pointer",fontSize:20,lineHeight:1,padding:"0 4px",flexShrink:0}}>×</button>
-                    :<div style={{width:24,flexShrink:0}}/>
-                  }
+                  <div style={{display:"flex",gap:8,alignItems:"flex-start",paddingLeft:30}}>
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke={B.orange} strokeWidth="2" style={{flexShrink:0,marginTop:9}}><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01" strokeLinecap="round"/></svg>
+                    <input value={cr.question||""} onChange={e=>updateQuestion(cat.id,cr.id,e.target.value)}
+                      placeholder={`Validation question for criterion ${idx+1}... (optional)`}
+                      style={{...inputBase,flex:1,fontSize:12,borderColor:B.orange+"44",background:B.white}}/>
+                  </div>
                 </div>
               ))}
               {!cfg.fixed&&<div style={{color:B.textLight,fontSize:11,paddingLeft:30,paddingTop:2}}>Min {cfg.min} criteria · Current: {cat.criteria.length}</div>}
@@ -672,17 +683,25 @@ function CandidateEval({matrix,candidate,onSave,onCancel}){
             </div>
             <div>
               {cat.criteria.map((cr,idx)=>(
-                <div key={cr.id} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 16px",borderTop:idx>0?`1px solid ${B.border}`:"none",background:scores[cr.id]!==undefined?B.white:B.bg}}>
-                  <div style={{width:20,height:20,borderRadius:"50%",background:bg,border:`1.5px solid ${accent}44`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                    <span style={{color:accent,fontSize:9,fontWeight:800}}>{idx+1}</span>
+                <div key={cr.id} style={{display:"flex",flexDirection:"column",padding:"12px 16px",borderTop:idx>0?`1px solid ${B.border}`:"none",background:scores[cr.id]!==undefined?B.white:B.bg,gap:10}}>
+                  <div style={{display:"flex",alignItems:"center",gap:12}}>
+                    <div style={{width:20,height:20,borderRadius:"50%",background:bg,border:`1.5px solid ${accent}44`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                      <span style={{color:accent,fontSize:9,fontWeight:800}}>{idx+1}</span>
+                    </div>
+                    <div style={{flex:1,color:B.textDark,fontSize:13,lineHeight:1.4,fontWeight:700}}>{cr.description}</div>
+                    <span style={{color:B.textLight,fontSize:11,fontFamily:"'DM Mono',monospace",flexShrink:0}}>{Math.round(catWeight*1000)/10}%</span>
+                    <div style={{display:"flex",gap:8,flexShrink:0}}>
+                      {[0,1,2,3].map(v=>(
+                        <ScoreButton key={v} value={v} selected={scores[cr.id]===v} onChange={val=>setScores(s=>({...s,[cr.id]:val}))}/>
+                      ))}
+                    </div>
                   </div>
-                  <div style={{flex:1,color:B.textDark,fontSize:13,lineHeight:1.4}}>{cr.description}</div>
-                  <span style={{color:B.textLight,fontSize:11,fontFamily:"'DM Mono',monospace",flexShrink:0}}>{Math.round(catWeight*1000)/10}%</span>
-                  <div style={{display:"flex",gap:8,flexShrink:0}}>
-                    {[0,1,2,3].map(v=>(
-                      <ScoreButton key={v} value={v} selected={scores[cr.id]===v} onChange={val=>setScores(s=>({...s,[cr.id]:val}))}/>
-                    ))}
-                  </div>
+                  {cr.question&&(
+                    <div style={{display:"flex",alignItems:"flex-start",gap:8,paddingLeft:32,background:B.orange+"0D",borderRadius:7,padding:"8px 12px 8px 12px",border:`1px solid ${B.orange}33`}}>
+                      <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke={B.orange} strokeWidth="2" style={{flexShrink:0,marginTop:1}}><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01" strokeLinecap="round"/></svg>
+                      <span style={{color:B.orange,fontSize:12,fontWeight:700,lineHeight:1.5}}>{cr.question}</span>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
