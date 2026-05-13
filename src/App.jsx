@@ -62,6 +62,7 @@ function applySortFilter(list,search,statusFilter,clientFilter,sortCol,sortDir){
     let cmp=0;
     if(sortCol==="num") cmp=(a.positionNumber||"").localeCompare(b.positionNumber||"",undefined,{numeric:true});
     else if(sortCol==="name") cmp=a.name.localeCompare(b.name);
+    else if(sortCol==="client") cmp=(a.clientName||"").localeCompare(b.clientName||"");
     return sortDir==="asc"?cmp:-cmp;
   });
 }
@@ -295,12 +296,10 @@ function MatrixRow({m,onSelect,onDelete}){
       <div style={{flexShrink:0}}><StatusBadge status={m.status||"activa"} small/></div>
       {/* Candidates */}
       <div style={{textAlign:"center",flexShrink:0,minWidth:80}}>
-        <div style={{color:B.textLight,fontSize:10,textTransform:"uppercase",letterSpacing:1,marginBottom:2}}>Candidates</div>
         <div style={{color:B.textDark,fontWeight:800,fontSize:14,fontFamily:"'DM Mono',monospace"}}>{cands.length}</div>
       </div>
       {/* Best score */}
       <div style={{textAlign:"center",flexShrink:0,minWidth:80}}>
-        <div style={{color:B.textLight,fontSize:10,textTransform:"uppercase",letterSpacing:1,marginBottom:2}}>Best score</div>
         <div style={{color:best!==null?B.green:B.textLight,fontWeight:800,fontSize:14,fontFamily:"'DM Mono',monospace"}}>{best!==null?`${best}%`:"—"}</div>
       </div>
       {/* 3-dot menu */}
@@ -437,6 +436,22 @@ function Home({matrices,onSelect,onCreate,onDelete,onStatusChange}){
         </div>
       ):(
         <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {/* Sortable header */}
+          <div style={{display:"flex",alignItems:"center",gap:20,padding:"4px 20px 8px",borderBottom:`1px solid ${B.border}`}}>
+            <button onClick={()=>handleColSort("num")} style={{flexShrink:0,background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:2,color:sortCol==="num"?B.blue:B.textLight,fontSize:11,textTransform:"uppercase",letterSpacing:1,fontWeight:700,fontFamily:"inherit",padding:0,minWidth:60}}>
+              # <SortIcon active={sortCol==="num"} dir={sortDir}/>
+            </button>
+            <button onClick={()=>handleColSort("name")} style={{flex:2,background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:2,color:sortCol==="name"?B.blue:B.textLight,fontSize:11,textTransform:"uppercase",letterSpacing:1,fontWeight:700,fontFamily:"inherit",padding:0,textAlign:"left"}}>
+              Position <SortIcon active={sortCol==="name"} dir={sortDir}/>
+            </button>
+            <button onClick={()=>handleColSort("client")} style={{flex:1,background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:2,color:sortCol==="client"?B.blue:B.textLight,fontSize:11,textTransform:"uppercase",letterSpacing:1,fontWeight:700,fontFamily:"inherit",padding:0,textAlign:"left"}}>
+              Client <SortIcon active={sortCol==="client"} dir={sortDir}/>
+            </button>
+            <div style={{flexShrink:0,minWidth:60,color:B.textLight,fontSize:11,textTransform:"uppercase",letterSpacing:1,fontWeight:700}}>Status</div>
+            <div style={{textAlign:"center",flexShrink:0,minWidth:80,color:B.textLight,fontSize:11,textTransform:"uppercase",letterSpacing:1,fontWeight:700}}>Candidates</div>
+            <div style={{textAlign:"center",flexShrink:0,minWidth:80,color:B.textLight,fontSize:11,textTransform:"uppercase",letterSpacing:1,fontWeight:700}}>Best score</div>
+            <div style={{width:28,flexShrink:0}}/>
+          </div>
           {filtered.map(m=><MatrixRow key={m.id} m={m} onSelect={onSelect} onDelete={onDelete}/>)}
         </div>
       )}
