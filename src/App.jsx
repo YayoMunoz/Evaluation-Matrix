@@ -1,5 +1,38 @@
 import { useState, useEffect, useRef } from "react";
 
+// ─── SUPABASE ─────────────────────────────────────────────────────────────────
+const SUPABASE_URL = "https://dqbdhsgbygnavlwpngye.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxYmRoc2dieWduYXZsd3BuZ3llIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2NjYzMDcsImV4cCI6MjA5NDI0MjMwN30.Iah7EncDUJmsrQpNVOndilw7r0wZuXZCmx8fk6wiUDg";
+
+async function dbLoad(){
+  try{
+    const r=await fetch(`${SUPABASE_URL}/rest/v1/matrices?select=id,data`,{headers:{"apikey":SUPABASE_KEY,"Authorization":`Bearer ${SUPABASE_KEY}`}});
+    const rows=await r.json();
+    if(Array.isArray(rows)) return rows.map(r=>r.data);
+  }catch(e){console.error(e);}
+  return null;
+}
+
+async function dbSave(matrices){
+  try{
+    // Upsert all matrices as individual rows
+    const rows=matrices.map(m=>({id:m.id,data:m}));
+    await fetch(`${SUPABASE_URL}/rest/v1/matrices`,{
+      method:"POST",
+      headers:{"apikey":SUPABASE_KEY,"Authorization":`Bearer ${SUPABASE_KEY}`,"Content-Type":"application/json","Prefer":"resolution=merge-duplicates"},
+      body:JSON.stringify(rows),
+    });
+    // Delete rows not in current list
+    const ids=matrices.map(m=>m.id);
+    if(ids.length>0){
+      await fetch(`${SUPABASE_URL}/rest/v1/matrices?id=not.in.(${ids.map(id=>`"${id}"`).join(",")})`,{
+        method:"DELETE",
+        headers:{"apikey":SUPABASE_KEY,"Authorization":`Bearer ${SUPABASE_KEY}`},
+      });
+    }
+  }catch(e){console.error(e);}
+}
+
 // ─── BRAND ────────────────────────────────────────────────────────────────────
 const B = {
   blue:"#1558B0",blueDark:"#0D2A52",blueMid:"#4A6FA5",blueLight:"#EBF2FB",
@@ -1117,12 +1150,12 @@ export default function App(){
   const viewingCandidate=activeMatrix?.candidates?.find(c=>c.id===viewingCandidateId);
 
   useEffect(()=>{
-    try{const saved=localStorage.getItem("recruit-matrices-v3");if(saved)setMatrices(JSON.parse(saved));}catch{}
+    dbLoad().then(data=>{if(data&&data.length>0)setMatrices(data);});
   },[]);
 
   function persist(updated){
     setMatrices(updated);
-    try{localStorage.setItem("recruit-matrices-v3",JSON.stringify(updated));}catch{}
+    dbSave(updated);
   }
   function handleSaveMatrix(m){
     const updated=matrices.find(x=>x.id===m.id)?matrices.map(x=>x.id===m.id?{...x,...m}:x):[...matrices,{...m,candidates:[]}];
