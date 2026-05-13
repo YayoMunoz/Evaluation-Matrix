@@ -1162,7 +1162,7 @@ export default function App(){
         </div>
       </div>
 
-      <div style={{padding:"32px 24px",maxWidth:980,margin:"0 auto",flex:1,width:"100%"}}>
+      <div style={{padding:"32px 24px",maxWidth:"100%",flex:1,width:"100%"}}>
         {view==="home"&&<Home matrices={matrices} onSelect={id=>{setActiveMatrixId(id);setView("detail");}} onCreate={()=>{setActiveMatrixId(null);setView("newMatrix");}} onDelete={handleDeleteMatrix} onStatusChange={handleStatusChange}/>}
         {view==="newMatrix"&&(
           <><div style={{marginBottom:24}}><h2 style={{margin:0,color:B.textDark,fontSize:24,fontWeight:900}}>New Evaluation Matrix</h2><p style={{color:B.textMid,margin:"5px 0 0",fontSize:14}}>Enter the position number, client and name, then define the criteria.</p></div>
