@@ -770,9 +770,6 @@ function CandidateReport({payload}){
               <div style={{padding:"13px 20px",background:bg,borderBottom:`1px solid ${accent}22`,display:"flex",alignItems:"center",gap:10}}>
                 <div style={{width:10,height:10,borderRadius:"50%",background:accent,flexShrink:0}}/>
                 <span style={{color:accent,fontWeight:800,fontSize:13,textTransform:"uppercase",letterSpacing:1.5,flex:1}}>{cat.name}</span>
-                <span style={{background:accent+"18",color:accent,border:`1.5px solid ${accent}44`,borderRadius:20,padding:"3px 14px",fontWeight:800,fontSize:14,fontFamily:"'DM Mono',monospace"}}>
-                  {Math.round(catScore*10)/10} <span style={{color:accent+"88",fontWeight:500,fontSize:12}}>/ {Math.round(catMax)}</span>
-                </span>
               </div>
               <div style={{padding:"16px 20px"}}>
                 <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
@@ -803,7 +800,6 @@ function CandidateReport({payload}){
             <div key={i} style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:B.textMid}}>
               <div style={{width:10,height:10,borderRadius:"50%",background:SCORE_COLORS[i],flexShrink:0}}/>
               <span>{lbl}</span>
-              <span style={{color:B.textLight,fontFamily:"'DM Mono',monospace",fontSize:11}}>({SCORE_VALUES[i]})</span>
             </div>
           ))}
         </div>
@@ -904,9 +900,6 @@ function CandidateView({matrix,candidate,onBack,onEdit,onDelete}){
             <div style={{padding:"13px 20px",background:bg,borderBottom:`1px solid ${accent}22`,display:"flex",alignItems:"center",gap:10}}>
               <div style={{width:10,height:10,borderRadius:"50%",background:accent,flexShrink:0}}/>
               <span style={{color:accent,fontWeight:800,fontSize:13,textTransform:"uppercase",letterSpacing:1.5,flex:1}}>{cat.name}</span>
-              <span style={{background:accent+"18",color:accent,border:`1.5px solid ${accent}44`,borderRadius:20,padding:"3px 14px",fontWeight:800,fontSize:14,fontFamily:"'DM Mono',monospace"}}>
-                {Math.round(catScore*10)/10} <span style={{color:accent+"88",fontWeight:500,fontSize:12}}>/ {Math.round(catMax)}</span>
-              </span>
             </div>
             <div style={{padding:"14px 20px"}}>
               <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
@@ -939,7 +932,6 @@ function CandidateView({matrix,candidate,onBack,onEdit,onDelete}){
           <div key={i} style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:B.textMid}}>
             <div style={{width:10,height:10,borderRadius:"50%",background:SCORE_COLORS[i],flexShrink:0}}/>
             <span>{lbl}</span>
-            <span style={{color:B.textLight,fontFamily:"'DM Mono',monospace",fontSize:11}}>({SCORE_VALUES[i]})</span>
           </div>
         ))}
       </div>
