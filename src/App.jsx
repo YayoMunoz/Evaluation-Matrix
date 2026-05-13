@@ -278,30 +278,32 @@ function MatrixCard({m,onSelect,onDelete}){
 function MatrixRow({m,onSelect,onDelete}){
   const cands=m.candidates||[];
   const best=cands.length?Math.max(...cands.map(c=>c.totalScore)):null;
-  const totalCriteria=m.categories.flatMap(c=>c.criteria).length;
   const [hov,setHov]=useState(false);
   return(
     <div onClick={()=>onSelect(m.id)} onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
-      style={{...card,padding:"13px 20px",cursor:"pointer",display:"flex",alignItems:"center",gap:14,transition:"box-shadow 0.15s,border-color 0.15s",boxShadow:hov?`0 4px 18px ${B.blue}18`:card.boxShadow,borderColor:hov?B.blue:B.border}}>
-      <div style={{width:52,flexShrink:0,textAlign:"center"}}><PosBadge number={m.positionNumber||"—"}/></div>
-      <div style={{flex:1,minWidth:0}}>
-        <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:2}}>
-          <div style={{color:B.textDark,fontWeight:800,fontSize:14,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{m.name}</div>
-          <StatusBadge status={m.status||"activa"} small/>
-        </div>
-        {m.clientName&&<div style={{display:"flex",alignItems:"center",gap:4}}>
-          <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke={B.textLight} strokeWidth="2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0H5m-2 0h2M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 00-1-1h-2a1 1 0 00-1 1v5m4 0H9" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          <span style={{color:B.textLight,fontSize:11,fontWeight:600}}>{m.clientName}</span>
-        </div>}
+      style={{background:B.white,borderRadius:10,border:`1px solid ${B.border}`,boxShadow:`0 1px 6px ${B.blue}08`,padding:"13px 20px",cursor:"pointer",display:"flex",alignItems:"center",gap:20,transition:"box-shadow 0.15s,border-color 0.15s",boxShadow:hov?`0 4px 18px ${B.blue}18`:`0 1px 6px ${B.blue}08`,borderColor:hov?B.blue:B.border}}>
+      {/* # */}
+      <div style={{flexShrink:0}}><PosBadge number={m.positionNumber||"—"}/></div>
+      {/* Position name */}
+      <div style={{flex:2,minWidth:0,color:B.textDark,fontWeight:800,fontSize:14,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{m.name}</div>
+      {/* Client */}
+      <div style={{flex:1,minWidth:0,display:"flex",alignItems:"center",gap:4}}>
+        <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke={B.textLight} strokeWidth="2" style={{flexShrink:0}}><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0H5m-2 0h2M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 00-1-1h-2a1 1 0 00-1 1v5m4 0H9" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        <span style={{color:B.textLight,fontSize:12,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{m.clientName||"—"}</span>
       </div>
-      <div style={{display:"flex",gap:28,flexShrink:0,alignItems:"center"}}>
-        {[{label:"Candidates",value:cands.length},{label:"Best score",value:best!==null?`${best}%`:"—",color:best!==null?B.green:B.textLight}].map((s,i)=>(
-          <div key={i} style={{textAlign:"center"}}>
-            <div style={{color:B.textLight,fontSize:10,textTransform:"uppercase",letterSpacing:1,marginBottom:2}}>{s.label}</div>
-            <div style={{color:s.color||B.textDark,fontWeight:800,fontSize:14,fontFamily:"'DM Mono',monospace"}}>{s.value}</div>
-          </div>
-        ))}
+      {/* Status */}
+      <div style={{flexShrink:0}}><StatusBadge status={m.status||"activa"} small/></div>
+      {/* Candidates */}
+      <div style={{textAlign:"center",flexShrink:0,minWidth:80}}>
+        <div style={{color:B.textLight,fontSize:10,textTransform:"uppercase",letterSpacing:1,marginBottom:2}}>Candidates</div>
+        <div style={{color:B.textDark,fontWeight:800,fontSize:14,fontFamily:"'DM Mono',monospace"}}>{cands.length}</div>
       </div>
+      {/* Best score */}
+      <div style={{textAlign:"center",flexShrink:0,minWidth:80}}>
+        <div style={{color:B.textLight,fontSize:10,textTransform:"uppercase",letterSpacing:1,marginBottom:2}}>Best score</div>
+        <div style={{color:best!==null?B.green:B.textLight,fontWeight:800,fontSize:14,fontFamily:"'DM Mono',monospace"}}>{best!==null?`${best}%`:"—"}</div>
+      </div>
+      {/* 3-dot menu */}
       <div onClick={e=>e.stopPropagation()}>
         <MatrixMenu matrixId={m.id} onDelete={onDelete}/>
       </div>
