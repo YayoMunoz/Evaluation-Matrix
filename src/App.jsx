@@ -1154,8 +1154,8 @@ export default function App(){
         <button onClick={()=>setView("home")} style={{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:10,padding:"6px 0"}}>
           <WexpandLogo size={34}/>
           <div style={{display:"flex",flexDirection:"column",alignItems:"flex-start"}}>
-            <span style={{color:B.textDark,fontWeight:900,fontSize:15,lineHeight:1}}>Evaluation Matrix</span>
-            <span style={{color:B.textLight,fontSize:10,lineHeight:1,marginTop:2,letterSpacing:0.5}}>Wexpand Recruitment</span>
+            <span style={{color:B.textDark,fontWeight:900,fontSize:16,lineHeight:1}}>Evaluation Matrix</span>
+            <span style={{color:B.textLight,fontSize:11,lineHeight:1,marginTop:2,letterSpacing:0.5}}>Wexpand Recruitment</span>
           </div>
         </button>
         {activeMatrix&&view!=="home"&&(
@@ -1207,8 +1207,8 @@ export default function App(){
       </div>
 
       <div style={{borderTop:`1px solid ${B.border}`,padding:"14px 32px",display:"flex",alignItems:"center",justifyContent:"space-between",background:B.white}}>
-        <span style={{color:B.textLight,fontSize:12}}>© 2026 Wexpand · Recruitment</span>
-        <div style={{display:"flex",alignItems:"center",gap:6}}><WexpandLogo size={20}/><span style={{color:B.blue,fontSize:12,fontWeight:700}}>wexpand</span></div>
+        <span style={{color:B.textLight,fontSize:13}}>© 2026 Wexpand · Recruitment</span>
+        <div style={{display:"flex",alignItems:"center",gap:6}}><WexpandLogo size={20}/><span style={{color:B.blue,fontSize:13,fontWeight:700}}>wexpand</span></div>
       </div>
     </div>
   );
