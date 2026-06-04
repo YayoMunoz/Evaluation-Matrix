@@ -15,21 +15,28 @@ async function dbLoad(){
 
 async function dbSave(matrices){
   try{
-    // Upsert all matrices as individual rows
+    // Solo UPSERT (insert/update). Nunca borrar matrices que no estén en la lista,
+    // porque si por cualquier error la lista local está incompleta (red lenta,
+    // race condition, otro dispositivo), se borrarían matrices reales por accidente.
+    // Para borrar matrices explícitamente, usar dbDelete(id).
     const rows=matrices.map(m=>({id:m.id,data:m}));
+    if(rows.length===0) return;
     await fetch(`${SUPABASE_URL}/rest/v1/matrices`,{
       method:"POST",
       headers:{"apikey":SUPABASE_KEY,"Authorization":`Bearer ${SUPABASE_KEY}`,"Content-Type":"application/json","Prefer":"resolution=merge-duplicates"},
       body:JSON.stringify(rows),
     });
-    // Delete rows not in current list
-    const ids=matrices.map(m=>m.id);
-    if(ids.length>0){
-      await fetch(`${SUPABASE_URL}/rest/v1/matrices?id=not.in.(${ids.map(id=>`"${id}"`).join(",")})`,{
-        method:"DELETE",
-        headers:{"apikey":SUPABASE_KEY,"Authorization":`Bearer ${SUPABASE_KEY}`},
-      });
-    }
+  }catch(e){console.error(e);}
+}
+
+// Borra una matriz específica de Supabase. Se llama solo desde el handler de
+// "Delete matrix" del UI, no automáticamente.
+async function dbDelete(id){
+  try{
+    await fetch(`${SUPABASE_URL}/rest/v1/matrices?id=eq.${encodeURIComponent(id)}`,{
+      method:"DELETE",
+      headers:{"apikey":SUPABASE_KEY,"Authorization":`Bearer ${SUPABASE_KEY}`},
+    });
   }catch(e){console.error(e);}
 }
 
@@ -1646,7 +1653,11 @@ export default function App(){
     const updated=matrices.find(x=>x.id===m.id)?matrices.map(x=>x.id===m.id?{...x,...m}:x):[...matrices,{...m,candidates:[]}];
     persist(updated);setActiveMatrixId(m.id);setView("detail");
   }
-  function handleDeleteMatrix(id){persist(matrices.filter(m=>m.id!==id));}
+  function handleDeleteMatrix(id){
+    // Borra la matriz local y también de Supabase explícitamente.
+    setMatrices(prev=>prev.filter(m=>m.id!==id));
+    dbDelete(id);
+  }
   function handleStatusChange(id,status){persist(matrices.map(m=>m.id===id?{...m,status}:m));}
   function handleSaveCandidate(cand){
     persist(matrices.map(m=>{if(m.id!==activeMatrixId)return m;const exists=m.candidates?.find(c=>c.id===cand.id);return{...m,candidates:exists?m.candidates.map(c=>c.id===cand.id?cand:c):[...(m.candidates||[]),cand]};}));
