@@ -862,7 +862,7 @@ function buildReportHTML(matrix,candidate){
         <span class="badge" style="color:${col};background:${col}14;border:1px solid ${col}33">${esc(lbl)}</span>
       </div>`;
     }).join("");
-    return `<div class="cat" style="border:1.5px solid ${accent}33">
+    return `<div data-pdf-block="cat" class="block-wrap"><div class="block-inner"><div class="cat" style="border:1.5px solid ${accent}33">
       <div class="cat-head" style="background:${bg};border-bottom:1px solid ${accent}22">
         <span class="dot" style="background:${accent}"></span>
         <span class="cat-name" style="color:${accent}">${esc(cat.name)}</span>
@@ -874,7 +874,7 @@ function buildReportHTML(matrix,candidate){
         </div>
         ${rows}
       </div>
-    </div>`;
+    </div></div></div>`;
   }).join("");
 
   const legendHTML=SCORE_LABELS.map((lbl,i)=>`<span class="leg"><span class="dot" style="background:${SCORE_COLORS[i]}"></span>${esc(lbl)}</span>`).join("");
@@ -884,6 +884,9 @@ function buildReportHTML(matrix,candidate){
     @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800;900&family=DM+Mono:wght@400;500&display=swap');
     *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     body{font-family:'Sora','Segoe UI',sans-serif;color:${B.textDark};background:#fff}
+    /* Wrappers para paginación bloque-por-bloque en PDF */
+    .block-wrap{width:100%}
+    .block-inner{max-width:730px;margin:0 auto;padding:0 24px}
     .hero{background:linear-gradient(135deg,${B.blue} 60%,#1a6fd4);padding:30px 40px 50px;color:#fff}
     .brand{display:flex;align-items:center;gap:8px;margin-bottom:24px;font-weight:900;font-size:15px}
     .pill{background:${B.orange};color:#fff;border-radius:20px;padding:2px 12px;font-size:11px;font-weight:800}
@@ -925,36 +928,43 @@ function buildReportHTML(matrix,candidate){
       .cat,.legend{break-inside:avoid;page-break-inside:avoid}
     }
   </style></head><body>
-    <div class="hero">
-      <div class="brand"><span style="color:#fff">wexpand</span><span class="pill">Recruitment</span></div>
-      <div class="kicker">Candidate Evaluation Report</div>
-      <h1>${esc(candidate.name)}</h1>
-      <div class="meta">
-        ${matrix.positionNumber?`<span class="num">#${esc(matrix.positionNumber)}</span>`:""}
-        <span>${esc(matrix.name)}</span>
-        ${matrix.clientName?`<span style="color:#ffffff44">·</span><span>${esc(matrix.clientName)}</span>`:""}
-      </div>
-    </div>
-    <div class="wrap">
-      <div class="card">
-        <div style="flex:1">
-          <div class="gs-label">Global Score</div>
-          <div class="gs-row"><span class="gs-num" style="color:${scoreColor(total)}">${total}</span><span class="gs-100">/ 100</span></div>
-          <div class="gs-fitwrap">
-            <div class="gs-bar"><div class="gs-fill" style="width:${total}%;background:${scoreColor(total)}"></div></div>
-            <span class="gs-fit" style="color:${scoreColor(total)}">${fitLabel(total)}</span>
-          </div>
+    <!-- Bloque 1: Hero + tarjeta de Global Score (mantienen el efecto de card sobresaliente) -->
+    <div data-pdf-block="header">
+      <div class="hero">
+        <div class="brand"><span style="color:#fff">wexpand</span><span class="pill">Recruitment</span></div>
+        <div class="kicker">Candidate Evaluation Report</div>
+        <h1>${esc(candidate.name)}</h1>
+        <div class="meta">
+          ${matrix.positionNumber?`<span class="num">#${esc(matrix.positionNumber)}</span>`:""}
+          <span>${esc(matrix.name)}</span>
+          ${matrix.clientName?`<span style="color:#ffffff44">·</span><span>${esc(matrix.clientName)}</span>`:""}
         </div>
-        <svg width="110" height="110" viewBox="0 0 100 100">
-          <circle cx="50" cy="50" r="${r}" fill="none" stroke="${scoreColor(total)}" stroke-width="12"/>
-          <text x="50" y="52" text-anchor="middle" dominant-baseline="middle" fill="${scoreColor(total)}" font-size="17" font-weight="900" font-family="DM Mono,monospace">${total}%</text>
-        </svg>
       </div>
-      <div class="section-label">Score by Category</div>
-      ${categoriesHTML}
-      <div class="legend"><span class="section-label" style="margin:0;align-self:center">Legend:</span>${legendHTML}</div>
-      <div class="footer">Shared by Wexpand Recruitment<div style="margin-top:5px;color:${B.textLight}88;font-size:13px">This report is read-only and for evaluation purposes only</div></div>
+      <div class="block-inner" style="padding-bottom:14px">
+        <div class="card">
+          <div style="flex:1">
+            <div class="gs-label">Global Score</div>
+            <div class="gs-row"><span class="gs-num" style="color:${scoreColor(total)}">${total}</span><span class="gs-100">/ 100</span></div>
+            <div class="gs-fitwrap">
+              <div class="gs-bar"><div class="gs-fill" style="width:${total}%;background:${scoreColor(total)}"></div></div>
+              <span class="gs-fit" style="color:${scoreColor(total)}">${fitLabel(total)}</span>
+            </div>
+          </div>
+          <svg width="110" height="110" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="${r}" fill="none" stroke="${scoreColor(total)}" stroke-width="12"/>
+            <text x="50" y="52" text-anchor="middle" dominant-baseline="middle" fill="${scoreColor(total)}" font-size="17" font-weight="900" font-family="DM Mono,monospace">${total}%</text>
+          </svg>
+        </div>
+      </div>
     </div>
+    <!-- Bloque 2: Label "Score by Category" -->
+    <div data-pdf-block="section-label" class="block-wrap"><div class="block-inner"><div class="section-label">Score by Category</div></div></div>
+    <!-- Bloques 3+: Una categoría por bloque (marcados internamente con data-pdf-block="cat") -->
+    ${categoriesHTML}
+    <!-- Bloque legend -->
+    <div data-pdf-block="legend" class="block-wrap"><div class="block-inner"><div class="legend"><span class="section-label" style="margin:0;align-self:center">Legend:</span>${legendHTML}</div></div></div>
+    <!-- Bloque footer -->
+    <div data-pdf-block="footer" class="block-wrap"><div class="block-inner"><div class="footer">Shared by Wexpand Recruitment<div style="margin-top:5px;color:${B.textLight}88;font-size:13px">This report is read-only and for evaluation purposes only</div></div></div></div>
   </body></html>`;
 }
 
@@ -975,8 +985,11 @@ function loadPdfLibs(){
   return window._pdfLibsPromise;
 }
 
-// Genera y descarga directamente el PDF del reporte (sin diálogo de impresión).
-// El usuario ve cómo se descarga el archivo con el nombre del candidato.
+// Genera y descarga directamente el PDF del reporte capturando bloque por bloque.
+// Estrategia: cada elemento marcado con [data-pdf-block] se captura como una
+// imagen independiente; el PDF se arma colocando cada imagen en la página
+// actual, o saltando a una nueva si no cabe. Esto garantiza que ninguna
+// tarjeta se corte a la mitad.
 async function downloadReportPDF(matrix,candidate){
   try{
     await loadPdfLibs();
@@ -986,11 +999,10 @@ async function downloadReportPDF(matrix,candidate){
     return;
   }
 
-  // Renderiza el HTML del reporte en un contenedor oculto a 794px (A4 a 96dpi).
+  // Renderiza el HTML en un contenedor oculto.
   const html=buildReportHTML(matrix,candidate);
   const container=document.createElement("div");
   container.style.cssText="position:fixed;left:-99999px;top:0;width:794px;background:#fff;z-index:-1;";
-  // Extrae solo el body del HTML construido
   const bodyMatch=html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
   const styleMatch=html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
   if(styleMatch){
@@ -1004,68 +1016,64 @@ async function downloadReportPDF(matrix,candidate){
   document.body.appendChild(container);
 
   try{
-    // Espera a que las fuentes y el layout estén listos.
     if(document.fonts&&document.fonts.ready) await document.fonts.ready;
-    await new Promise(r=>setTimeout(r,250));
+    await new Promise(r=>setTimeout(r,300));
 
-    // Captura todo el contenido como un canvas en alta resolución.
-    const canvas=await window.html2canvas(container,{
-      scale:2,
-      useCORS:true,
-      backgroundColor:"#ffffff",
-      logging:false,
-      windowWidth:794,
-    });
+    // Encuentra todos los bloques que vamos a paginar.
+    const blocks=Array.from(container.querySelectorAll("[data-pdf-block]"));
+    if(blocks.length===0){
+      throw new Error("No PDF blocks found in report");
+    }
 
-    // Crea el PDF A4 y trocea el canvas en páginas, buscando zonas blancas para
-    // cortes limpios (evita partir tarjetas a la mitad).
+    // Captura cada bloque como un canvas independiente, en orden.
+    const blockCanvases=[];
+    for(const el of blocks){
+      const c=await window.html2canvas(el,{
+        scale:2,
+        useCORS:true,
+        backgroundColor:"#ffffff",
+        logging:false,
+      });
+      blockCanvases.push({canvas:c,type:el.getAttribute("data-pdf-block")});
+    }
+
+    // Configura el PDF A4.
     const {jsPDF}=window.jspdf;
     const pdf=new jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
     const pdfW=210,pdfH=297;
-    const pxPerMm=canvas.width/pdfW;
-    const pageHeightPx=Math.floor(pdfH*pxPerMm);
+    const sideMargin=0;  // sin márgenes laterales (el hero llega a los bordes)
+    const topMargin=0;   // primera página: sin margen (hero arriba)
+    const innerTopMargin=10; // margen superior en páginas 2+
+    const bottomMargin=10;
+    const usableW=pdfW-sideMargin*2;
 
-    // Helper: detecta si una fila es "segura" para cortar = todos sus píxeles
-    // tienen el mismo color (zona uniforme entre cards). El fondo del reporte
-    // es #F4F8FE (azul claro), no blanco puro, así que no se puede chequear
-    // contra blanco; en vez de eso miramos si la fila es uniforme y clara.
-    const ctx=canvas.getContext("2d");
-    function isSafeRow(y){
-      if(y<0||y>=canvas.height) return false;
-      const data=ctx.getImageData(0,y,canvas.width,1).data;
-      const r0=data[0],g0=data[1],b0=data[2];
-      // La fila debe ser clara (cualquier color de fondo blanco o azul muy claro)
-      if(r0<230||g0<230||b0<230) return false;
-      // Y debe ser uniforme: todos los píxeles iguales (±3 de tolerancia)
-      for(let i=4;i<data.length;i+=4){
-        if(Math.abs(data[i]-r0)>3||Math.abs(data[i+1]-g0)>3||Math.abs(data[i+2]-b0)>3) return false;
-      }
-      return true;
+    // Cursor de posición vertical y página actual.
+    let cursorY=topMargin;
+    let pageIdx=0;
+    // Fondo blanco en la primera página.
+    pdf.setFillColor(255,255,255);
+    pdf.rect(0,0,pdfW,pdfH,"F");
+
+    function startNewPage(){
+      pdf.addPage();
+      pageIdx++;
+      pdf.setFillColor(255,255,255);
+      pdf.rect(0,0,pdfW,pdfH,"F");
+      cursorY=innerTopMargin;
     }
 
-    let yStart=0;
-    let pageIndex=0;
-    while(yStart<canvas.height){
-      let yEnd=Math.min(yStart+pageHeightPx,canvas.height);
-      // Si no es la última página, retrocede hasta encontrar una zona segura
-      if(yEnd<canvas.height){
-        let safe=yEnd;
-        const minSafe=yStart+Math.floor(pageHeightPx*0.35); // puede retroceder hasta 65% de la página
-        while(safe>minSafe&&!isSafeRow(safe)) safe--;
-        if(safe>minSafe) yEnd=safe;
+    for(const {canvas:c,type} of blockCanvases){
+      const blockHmm=(c.height/c.width)*usableW;
+      // ¿Cabe en la página actual?
+      const remaining=pdfH-bottomMargin-cursorY;
+      if(blockHmm>remaining&&cursorY>topMargin+0.1){
+        // No cabe → nueva página
+        startNewPage();
       }
-      const sliceHeight=yEnd-yStart;
-      // Crea un canvas temporal con la porción de esta página
-      const pageCanvas=document.createElement("canvas");
-      pageCanvas.width=canvas.width;
-      pageCanvas.height=sliceHeight;
-      pageCanvas.getContext("2d").drawImage(canvas,0,yStart,canvas.width,sliceHeight,0,0,canvas.width,sliceHeight);
-      const imgData=pageCanvas.toDataURL("image/jpeg",0.92);
-      const imgHmm=sliceHeight/pxPerMm;
-      if(pageIndex>0) pdf.addPage();
-      pdf.addImage(imgData,"JPEG",0,0,pdfW,imgHmm);
-      yStart=yEnd;
-      pageIndex++;
+      const imgData=c.toDataURL("image/jpeg",0.92);
+      // El hero pega a los bordes; los demás bloques también ocupan ancho completo
+      pdf.addImage(imgData,"JPEG",sideMargin,cursorY,usableW,blockHmm);
+      cursorY+=blockHmm;
     }
 
     const safeName=(candidate.name||"candidate").replace(/[^\w\s-]/g,"").replace(/\s+/g,"_");
