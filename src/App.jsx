@@ -1025,13 +1025,20 @@ async function downloadReportPDF(matrix,candidate){
     const pxPerMm=canvas.width/pdfW;
     const pageHeightPx=Math.floor(pdfH*pxPerMm);
 
-    // Helper: detecta si una fila del canvas es enteramente "blanca" (segura para cortar)
+    // Helper: detecta si una fila es "segura" para cortar = todos sus píxeles
+    // tienen el mismo color (zona uniforme entre cards). El fondo del reporte
+    // es #F4F8FE (azul claro), no blanco puro, así que no se puede chequear
+    // contra blanco; en vez de eso miramos si la fila es uniforme y clara.
     const ctx=canvas.getContext("2d");
-    function isWhiteRow(y){
+    function isSafeRow(y){
       if(y<0||y>=canvas.height) return false;
       const data=ctx.getImageData(0,y,canvas.width,1).data;
-      for(let i=0;i<data.length;i+=4){
-        if(data[i]<248||data[i+1]<248||data[i+2]<248) return false;
+      const r0=data[0],g0=data[1],b0=data[2];
+      // La fila debe ser clara (cualquier color de fondo blanco o azul muy claro)
+      if(r0<230||g0<230||b0<230) return false;
+      // Y debe ser uniforme: todos los píxeles iguales (±3 de tolerancia)
+      for(let i=4;i<data.length;i+=4){
+        if(Math.abs(data[i]-r0)>3||Math.abs(data[i+1]-g0)>3||Math.abs(data[i+2]-b0)>3) return false;
       }
       return true;
     }
@@ -1040,11 +1047,11 @@ async function downloadReportPDF(matrix,candidate){
     let pageIndex=0;
     while(yStart<canvas.height){
       let yEnd=Math.min(yStart+pageHeightPx,canvas.height);
-      // Si no es la última página, retrocede hasta encontrar una zona blanca segura
+      // Si no es la última página, retrocede hasta encontrar una zona segura
       if(yEnd<canvas.height){
         let safe=yEnd;
-        const minSafe=yStart+Math.floor(pageHeightPx*0.5); // no retroceder más de la mitad
-        while(safe>minSafe&&!isWhiteRow(safe)) safe--;
+        const minSafe=yStart+Math.floor(pageHeightPx*0.35); // puede retroceder hasta 65% de la página
+        while(safe>minSafe&&!isSafeRow(safe)) safe--;
         if(safe>minSafe) yEnd=safe;
       }
       const sliceHeight=yEnd-yStart;
