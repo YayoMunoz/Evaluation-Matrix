@@ -33,6 +33,48 @@ async function dbSave(matrices){
   }catch(e){console.error(e);}
 }
 
+// ─── SHORT SHARE LINKS (Supabase) ─────────────────────────────────────────────
+// Genera un ID corto y guarda el reporte en la tabla `shared_reports`.
+// El link resultante lleva solo ?r=<id> en vez de todo el payload en Base64,
+// por lo que es corto y no se rompe al pegarlo en WhatsApp / correo.
+function shortId(){
+  const chars="abcdefghijklmnopqrstuvwxyz0123456789";
+  let s="";for(let i=0;i<8;i++)s+=chars[Math.floor(Math.random()*chars.length)];
+  return s;
+}
+
+// Guarda un reporte y devuelve su id corto (o null si falla).
+async function saveSharedReport(payload){
+  try{
+    const id=shortId();
+    const r=await fetch(`${SUPABASE_URL}/rest/v1/shared_reports`,{
+      method:"POST",
+      headers:{
+        "apikey":SUPABASE_KEY,
+        "Authorization":`Bearer ${SUPABASE_KEY}`,
+        "Content-Type":"application/json",
+        "Prefer":"return=minimal",
+      },
+      body:JSON.stringify({id,data:payload}),
+    });
+    if(r.ok) return id;
+    console.error("saveSharedReport failed",r.status);
+  }catch(e){console.error(e);}
+  return null;
+}
+
+// Lee un reporte guardado por su id corto.
+async function loadSharedReport(id){
+  try{
+    const r=await fetch(`${SUPABASE_URL}/rest/v1/shared_reports?id=eq.${encodeURIComponent(id)}&select=data`,{
+      headers:{"apikey":SUPABASE_KEY,"Authorization":`Bearer ${SUPABASE_KEY}`},
+    });
+    const rows=await r.json();
+    if(Array.isArray(rows)&&rows.length>0) return rows[0].data;
+  }catch(e){console.error(e);}
+  return null;
+}
+
 // ─── BRAND ────────────────────────────────────────────────────────────────────
 const B = {
   blue:"#1558B0",blueDark:"#0D2A52",blueMid:"#4A6FA5",blueLight:"#EBF2FB",
@@ -495,8 +537,81 @@ function Home({matrices,onSelect,onCreate,onDelete,onStatusChange}){
   );
 }
 
+// ─── CLIENT COMBOBOX ──────────────────────────────────────────────────────────
+// Campo tipo "combobox": muestra la lista de clientes existentes, permite
+// filtrar escribiendo y crear uno nuevo cuando no hay match. Evita duplicados
+// por diferencias de mayúsculas o espacios (normaliza antes de comparar).
+function normalizeClientKey(s){return (s||"").trim().toLowerCase().replace(/\s+/g," ");}
+
+function ClientCombobox({value,onChange,existingClients}){
+  const [open,setOpen]=useState(false);
+  const [query,setQuery]=useState(value||"");
+  const wrapRef=useRef(null);
+
+  // Sync externo (cuando se edita una matriz y entra un value distinto)
+  useEffect(()=>{setQuery(value||"");},[value]);
+
+  // Cerrar al hacer clic fuera
+  useEffect(()=>{
+    function onDoc(e){if(wrapRef.current&&!wrapRef.current.contains(e.target))setOpen(false);}
+    document.addEventListener("mousedown",onDoc);
+    return()=>document.removeEventListener("mousedown",onDoc);
+  },[]);
+
+  const q=query.trim();
+  const qKey=normalizeClientKey(q);
+  const filtered=existingClients.filter(c=>!q||normalizeClientKey(c).includes(qKey));
+  const exactMatch=existingClients.some(c=>normalizeClientKey(c)===qKey);
+  const showAddOption=q.length>0&&!exactMatch;
+
+  function pick(name){
+    onChange(name);
+    setQuery(name);
+    setOpen(false);
+  }
+
+  return(
+    <div ref={wrapRef} style={{position:"relative"}}>
+      <svg style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",pointerEvents:"none",zIndex:1}} width="15" height="15" fill="none" viewBox="0 0 24 24" stroke={B.textLight} strokeWidth="2">
+        <path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0H5m-2 0h2M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 00-1-1h-2a1 1 0 00-1 1v5m4 0H9" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+      <input
+        value={query}
+        onChange={e=>{setQuery(e.target.value);onChange(e.target.value);setOpen(true);}}
+        onFocus={()=>setOpen(true)}
+        placeholder="Select or type a new client..."
+        style={{...inputBase,width:"100%",paddingLeft:34,paddingRight:34,fontSize:14,padding:"10px 34px 10px 34px"}}
+        autoComplete="off"
+      />
+      <svg onClick={()=>setOpen(o=>!o)} style={{position:"absolute",right:10,top:"50%",transform:`translateY(-50%) rotate(${open?180:0}deg)`,cursor:"pointer",transition:"transform 0.15s"}} width="16" height="16" fill="none" viewBox="0 0 24 24" stroke={B.textLight} strokeWidth="2">
+        <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+      {open&&(filtered.length>0||showAddOption)&&(
+        <div style={{position:"absolute",top:"calc(100% + 4px)",left:0,right:0,background:B.white,border:`1.5px solid ${B.border}`,borderRadius:8,boxShadow:`0 6px 24px ${B.blue}22`,zIndex:10,maxHeight:240,overflowY:"auto"}}>
+          {showAddOption&&(
+            <div onMouseDown={e=>{e.preventDefault();pick(q);}} style={{padding:"10px 14px",cursor:"pointer",borderBottom:filtered.length>0?`1px solid ${B.bg}`:"none",display:"flex",alignItems:"center",gap:8,color:B.blue,fontWeight:700,fontSize:13}}
+              onMouseEnter={e=>e.currentTarget.style.background=B.blueLight}
+              onMouseLeave={e=>e.currentTarget.style.background=B.white}>
+              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke={B.blue} strokeWidth="2.5"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>
+              Add new client: <span style={{fontWeight:800}}>&ldquo;{q}&rdquo;</span>
+            </div>
+          )}
+          {filtered.map(c=>(
+            <div key={c} onMouseDown={e=>{e.preventDefault();pick(c);}} style={{padding:"10px 14px",cursor:"pointer",display:"flex",alignItems:"center",gap:8,fontSize:13,color:B.textDark}}
+              onMouseEnter={e=>e.currentTarget.style.background=B.bg}
+              onMouseLeave={e=>e.currentTarget.style.background=B.white}>
+              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke={B.textLight} strokeWidth="2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0H5m-2 0h2" strokeLinecap="round"/></svg>
+              {c}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── MATRIX BUILDER ───────────────────────────────────────────────────────────
-function MatrixBuilder({matrix,onSave,onCancel}){
+function MatrixBuilder({matrix,onSave,onCancel,existingClients}){
   const [positionNumber,setPositionNumber]=useState(matrix?.positionNumber||"");
   const [clientName,setClientName]=useState(matrix?.clientName||"");
   const [name,setName]=useState(matrix?.name||"");
@@ -529,7 +644,12 @@ function MatrixBuilder({matrix,onSave,onCancel}){
       if(cat.criteria.length<cfg.min) return alert(`${cat.name} requires at least ${cfg.min} criteria.`);
       if(cat.criteria.some(cr=>!cr.description.trim())) return alert(`All criteria in ${cat.name} must have a description.`);
     }
-    onSave({id:matrix?.id||uid(),positionNumber:positionNumber.trim(),clientName:clientName.trim(),name:name.trim(),status:matrix?.status||"activa",categories});
+    // Normaliza el nombre del cliente: si ya existe uno con el mismo nombre
+    // (ignorando mayúsculas y espacios extra), reutiliza la forma existente.
+    const inputClient=clientName.trim();
+    const matchExisting=(existingClients||[]).find(c=>normalizeClientKey(c)===normalizeClientKey(inputClient));
+    const finalClient=matchExisting||inputClient;
+    onSave({id:matrix?.id||uid(),positionNumber:positionNumber.trim(),clientName:finalClient,name:name.trim(),status:matrix?.status||"activa",categories});
   }
 
   return(
@@ -550,12 +670,7 @@ function MatrixBuilder({matrix,onSave,onCancel}){
 
       <div style={{marginBottom:24}}>
         <label style={{color:B.textMid,fontSize:12,textTransform:"uppercase",letterSpacing:1,fontWeight:700,display:"block",marginBottom:6}}>Client Name <span style={{color:B.red}}>*</span></label>
-        <div style={{position:"relative"}}>
-          <svg style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",pointerEvents:"none"}} width="15" height="15" fill="none" viewBox="0 0 24 24" stroke={B.textLight} strokeWidth="2">
-            <path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0H5m-2 0h2M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 00-1-1h-2a1 1 0 00-1 1v5m4 0H9" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          <input value={clientName} onChange={e=>setClientName(e.target.value)} placeholder="e.g. Acme Corporation" style={{...inputBase,width:"100%",paddingLeft:34,fontSize:14,padding:"10px 14px 10px 34px"}}/>
-        </div>
+        <ClientCombobox value={clientName} onChange={setClientName} existingClients={existingClients||[]}/>
       </div>
 
       {(positionNumber||name||clientName)&&(
@@ -718,14 +833,169 @@ function CandidateEval({matrix,candidate,onSave,onCancel}){
   );
 }
 
+// ─── PDF REPORT GENERATOR ─────────────────────────────────────────────────────
+// Construye un documento HTML autónomo que replica el reporte del candidato y
+// abre el diálogo de impresión del navegador (el usuario elige "Guardar como PDF").
+// No requiere librerías externas y conserva colores, gráfica de score y barras.
+function buildReportHTML(matrix,candidate){
+  const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+  const scoreColor=s=>s>=90?B.green:s>=70?B.blue:s>=50?B.yellow:B.red;
+  const fitLabel=s=>s>=90?"Excellent fit":s>=70?"Good fit":s>=50?"Partial fit":"Low fit";
+  const total=candidate.totalScore||0;
+  const r=42,circ=2*Math.PI*r;
+
+  const categoriesHTML=matrix.categories.map(cat=>{
+    const cfg=CAT_CONFIG.find(c=>c.id===cat.id);
+    const accent=CAT_COLORS[cat.id];
+    const bg=CAT_BG[cat.id];
+    const wpc=cfg.pool/cat.criteria.length;
+    const catScore=cat.criteria.reduce((s,cr)=>{const v=candidate.scores?.[cr.id];return s+(v!==undefined?wpc*SCORE_VALUES[v]:0);},0);
+    const catMax=cfg.pool*100;
+    const pct=catMax>0?Math.round((catScore/catMax)*100):0;
+    const rows=cat.criteria.map((cr,idx)=>{
+      const v=candidate.scores?.[cr.id];
+      const lbl=v!==undefined?SCORE_LABELS[v]:"Not evaluated";
+      const col=v!==undefined?SCORE_COLORS[v]:B.textLight;
+      return `<div class="crit" style="${idx>0?`border-top:1px solid ${B.bg};`:""}">
+        <span class="dot" style="background:${col}"></span>
+        <span class="crit-desc">${esc(cr.description)}</span>
+        <span class="badge" style="color:${col};background:${col}14;border:1px solid ${col}33">${esc(lbl)}</span>
+      </div>`;
+    }).join("");
+    return `<div class="cat" style="border:1.5px solid ${accent}33">
+      <div class="cat-head" style="background:${bg};border-bottom:1px solid ${accent}22">
+        <span class="dot" style="background:${accent}"></span>
+        <span class="cat-name" style="color:${accent}">${esc(cat.name)}</span>
+      </div>
+      <div class="cat-body">
+        <div class="bar-row">
+          <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${accent}"></div></div>
+          <span class="bar-pct" style="color:${accent}">${pct}%</span>
+        </div>
+        ${rows}
+      </div>
+    </div>`;
+  }).join("");
+
+  const legendHTML=SCORE_LABELS.map((lbl,i)=>`<span class="leg"><span class="dot" style="background:${SCORE_COLORS[i]}"></span>${esc(lbl)}</span>`).join("");
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${esc(candidate.name)} — Evaluation</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800;900&family=DM+Mono:wght@400;500&display=swap');
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    body{font-family:'Sora','Segoe UI',sans-serif;color:${B.textDark};background:#fff}
+    .hero{background:linear-gradient(135deg,${B.blue} 60%,#1a6fd4);padding:30px 40px 50px;color:#fff}
+    .brand{display:flex;align-items:center;gap:8px;margin-bottom:24px;font-weight:900;font-size:15px}
+    .pill{background:${B.orange};color:#fff;border-radius:20px;padding:2px 12px;font-size:11px;font-weight:800}
+    .kicker{color:#ffffff88;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin-bottom:8px}
+    h1{font-size:32px;font-weight:900;letter-spacing:-.5px;margin-bottom:12px}
+    .meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:14px;color:#ffffffcc}
+    .num{background:${B.orange};color:#fff;border-radius:6px;padding:3px 11px;font-size:12px;font-weight:800;font-family:'DM Mono',monospace}
+    .wrap{max-width:730px;margin:0 auto;padding:0 24px 50px}
+    .card{background:#fff;border-radius:16px;border:1px solid ${B.border};padding:24px 28px;margin-top:-28px;margin-bottom:28px;display:flex;align-items:center;gap:24px;box-shadow:0 8px 32px ${B.blue}18}
+    .gs-label{color:${B.textLight};font-size:11px;text-transform:uppercase;letter-spacing:1.5px;font-weight:700;margin-bottom:6px}
+    .gs-num{font-size:56px;font-weight:900;font-family:'DM Mono',monospace;line-height:1}
+    .gs-row{display:flex;align-items:baseline;gap:8px}
+    .gs-100{font-size:22px;color:${B.textLight};font-weight:600}
+    .gs-bar{flex:1;height:8px;background:${B.blueLight};border-radius:4px;overflow:hidden}
+    .gs-fill{height:100%;border-radius:4px}
+    .gs-fitwrap{margin-top:12px;display:flex;align-items:center;gap:8px}
+    .gs-fit{font-size:13px;font-weight:800;white-space:nowrap}
+    .section-label{color:${B.textLight};font-size:11px;text-transform:uppercase;letter-spacing:1.5px;font-weight:700;margin-bottom:14px}
+    .cat{border-radius:14px;overflow:hidden;margin-bottom:14px;page-break-inside:avoid}
+    .cat-head{padding:13px 20px;display:flex;align-items:center;gap:10px}
+    .cat-name{font-weight:800;font-size:13px;text-transform:uppercase;letter-spacing:1.5px}
+    .cat-body{padding:16px 20px}
+    .bar-row{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+    .bar-track{flex:1;height:10px;background:${B.blueLight};border-radius:5px;overflow:hidden}
+    .bar-fill{height:100%;border-radius:5px}
+    .bar-pct{font-weight:800;font-size:15px;font-family:'DM Mono',monospace;width:44px;text-align:right}
+    .crit{display:flex;align-items:center;gap:12px;padding:10px 0}
+    .crit-desc{flex:1;font-size:13px;line-height:1.42}
+    .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;display:inline-block}
+    .cat-head .dot{width:10px;height:10px}
+    .badge{font-size:11px;font-weight:700;white-space:nowrap;border-radius:20px;padding:3px 10px;flex-shrink:0}
+    .legend{background:#fff;border-radius:10px;border:1px solid ${B.border};padding:12px 20px;display:flex;gap:18px;flex-wrap:wrap;margin-bottom:30px}
+    .leg{display:flex;align-items:center;gap:6px;font-size:12px;color:${B.textMid}}
+    .footer{text-align:center;color:${B.textLight};font-size:12px;border-top:1px solid ${B.border};padding-top:20px}
+    @media print{
+      @page{margin:14mm 0}
+      .hero{padding-top:24px}
+      /* Evita que una categoría se corte y le da aire si cae al inicio de una hoja */
+      .cat,.legend{break-inside:avoid;page-break-inside:avoid}
+    }
+  </style></head><body>
+    <div class="hero">
+      <div class="brand"><span style="color:#fff">wexpand</span><span class="pill">Recruitment</span></div>
+      <div class="kicker">Candidate Evaluation Report</div>
+      <h1>${esc(candidate.name)}</h1>
+      <div class="meta">
+        ${matrix.positionNumber?`<span class="num">#${esc(matrix.positionNumber)}</span>`:""}
+        <span>${esc(matrix.name)}</span>
+        ${matrix.clientName?`<span style="color:#ffffff44">·</span><span>${esc(matrix.clientName)}</span>`:""}
+      </div>
+    </div>
+    <div class="wrap">
+      <div class="card">
+        <div style="flex:1">
+          <div class="gs-label">Global Score</div>
+          <div class="gs-row"><span class="gs-num" style="color:${scoreColor(total)}">${total}</span><span class="gs-100">/ 100</span></div>
+          <div class="gs-fitwrap">
+            <div class="gs-bar"><div class="gs-fill" style="width:${total}%;background:${scoreColor(total)}"></div></div>
+            <span class="gs-fit" style="color:${scoreColor(total)}">${fitLabel(total)}</span>
+          </div>
+        </div>
+        <svg width="110" height="110" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="${r}" fill="none" stroke="${scoreColor(total)}" stroke-width="12"/>
+          <text x="50" y="52" text-anchor="middle" dominant-baseline="middle" fill="${scoreColor(total)}" font-size="17" font-weight="900" font-family="DM Mono,monospace">${total}%</text>
+        </svg>
+      </div>
+      <div class="section-label">Score by Category</div>
+      ${categoriesHTML}
+      <div class="legend"><span class="section-label" style="margin:0;align-self:center">Legend:</span>${legendHTML}</div>
+      <div class="footer">Shared by Wexpand Recruitment<div style="margin-top:5px;color:${B.textLight}88;font-size:13px">This report is read-only and for evaluation purposes only</div></div>
+    </div>
+  </body></html>`;
+}
+
+function downloadReportPDF(matrix,candidate){
+  const html=buildReportHTML(matrix,candidate);
+  const w=window.open("","_blank");
+  if(!w){alert("Please allow pop-ups to download the PDF.");return;}
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  // Espera a que carguen las fuentes antes de abrir el diálogo de impresión.
+  w.onload=()=>{setTimeout(()=>{w.focus();w.print();},400);};
+}
+
 // ─── SHARE MODAL ──────────────────────────────────────────────────────────────
 function ShareModal({matrix,candidate,onClose}){
   const [copied,setCopied]=useState(false);
-  const payload={matrix,candidate};
-  const encoded=btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
-  const shareUrl=`${window.location.origin}${window.location.pathname}?share=${encoded}`;
-  function copyLink(){
-    navigator.clipboard.writeText(shareUrl).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2500);});
+  const [loading,setLoading]=useState(false);
+  const [shareUrl,setShareUrl]=useState("");
+  const base=`${window.location.origin}${window.location.pathname}`;
+
+  async function copyLink(){
+    if(loading) return;
+    setLoading(true);
+    try{
+      let url=shareUrl;
+      if(!url){
+        const id=await saveSharedReport({matrix,candidate});
+        if(id){
+          url=`${base}?r=${id}`;
+        }else{
+          // Fallback: si Supabase falla, usa el link largo de siempre.
+          const encoded=btoa(unescape(encodeURIComponent(JSON.stringify({matrix,candidate}))));
+          url=`${base}?share=${encoded}`;
+        }
+        setShareUrl(url);
+      }
+      await navigator.clipboard.writeText(url);
+      setCopied(true);setTimeout(()=>setCopied(false),2500);
+    }catch(e){console.error(e);}
+    setLoading(false);
   }
   return(
     <div style={{position:"fixed",inset:0,background:"#0D2A5288",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:24}} onClick={e=>e.target===e.currentTarget&&onClose()}>
@@ -751,10 +1021,12 @@ function ShareModal({matrix,candidate,onClose}){
         </div>
         <div style={{background:B.bg,border:`1.5px solid ${B.border}`,borderRadius:8,padding:"10px 14px",marginBottom:14,display:"flex",alignItems:"center",gap:10}}>
           <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke={B.textLight} strokeWidth="2" style={{flexShrink:0}}><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" strokeLinecap="round"/></svg>
-          <span style={{color:B.textMid,fontSize:11,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontFamily:"'DM Mono',monospace"}}>{shareUrl}</span>
+          <span style={{color:B.textMid,fontSize:11,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontFamily:"'DM Mono',monospace"}}>{shareUrl||"Click \u201cCopy link\u201d to generate a short, shareable link"}</span>
         </div>
-        <button onClick={copyLink} style={{...btnPrimary,width:"100%",textAlign:"center",padding:"12px",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center",gap:8,background:copied?B.green:B.blue}}>
-          {copied
+        <button onClick={copyLink} disabled={loading} style={{...btnPrimary,width:"100%",textAlign:"center",padding:"12px",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center",gap:8,background:copied?B.green:B.blue,opacity:loading?0.7:1,cursor:loading?"wait":"pointer"}}>
+          {loading
+            ?<>Generating…</>
+            :copied
             ?<><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="2.5"><path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/></svg>Link copied!</>
             :<><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" strokeLinecap="round"/></svg>Copy link</>
           }
@@ -777,6 +1049,10 @@ function CandidateReport({payload}){
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:32}}>
           <WexpandLogo size={30}/><span style={{color:B.white,fontWeight:900,fontSize:15}}>wexpand</span>
           <span style={{background:B.orange,color:B.white,borderRadius:20,padding:"2px 12px",fontSize:11,fontWeight:800,marginLeft:4}}>Recruitment</span>
+          <button onClick={()=>downloadReportPDF(matrix,candidate)} style={{marginLeft:"auto",background:"#ffffff22",color:B.white,border:"1px solid #ffffff55",borderRadius:8,padding:"8px 14px",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            Download PDF
+          </button>
         </div>
         <div style={{color:"#ffffff88",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:2,marginBottom:8}}>Candidate Evaluation Report</div>
         <h1 style={{color:B.white,margin:"0 0 14px",fontSize:34,fontWeight:900,letterSpacing:-0.5}}>{candidate.name}</h1>
@@ -870,12 +1146,29 @@ function CandidateReport({payload}){
 // ─── CANDIDATE VIEW (report + share link) ────────────────────────────────────
 function CandidateView({matrix,candidate,onBack,onEdit,onDelete}){
   const [copied,setCopied]=useState(false);
-  const payload={matrix,candidate};
-  const encoded=btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
-  const shareUrl=`${window.location.origin}${window.location.pathname}?share=${encoded}`;
+  const [loading,setLoading]=useState(false);
+  const [shareUrl,setShareUrl]=useState("");
+  const base=`${window.location.origin}${window.location.pathname}`;
 
-  function copyLink(){
-    navigator.clipboard.writeText(shareUrl).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2500);});
+  async function copyLink(){
+    if(loading) return;
+    setLoading(true);
+    try{
+      let url=shareUrl;
+      if(!url){
+        const id=await saveSharedReport({matrix,candidate});
+        if(id){
+          url=`${base}?r=${id}`;
+        }else{
+          const encoded=btoa(unescape(encodeURIComponent(JSON.stringify({matrix,candidate}))));
+          url=`${base}?share=${encoded}`;
+        }
+        setShareUrl(url);
+      }
+      await navigator.clipboard.writeText(url);
+      setCopied(true);setTimeout(()=>setCopied(false),2500);
+    }catch(e){console.error(e);}
+    setLoading(false);
   }
 
   const scoreColor=s=>s>=90?B.green:s>=70?B.blue:s>=50?B.yellow:B.red;
@@ -891,6 +1184,10 @@ function CandidateView({matrix,candidate,onBack,onEdit,onDelete}){
           <h2 style={{color:B.textDark,margin:0,fontSize:22,fontWeight:900}}>{candidate.name}</h2>
           <div style={{color:B.textMid,fontSize:13,marginTop:2}}>{matrix.name} · <PosBadge number={matrix.positionNumber||"—"}/></div>
         </div>
+        <button onClick={()=>downloadReportPDF(matrix,candidate)} style={{...btnPrimary,padding:"7px 14px",fontSize:13,display:"flex",alignItems:"center",gap:6}}>
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          Download PDF
+        </button>
         <button onClick={onEdit} style={{...btnSecondary,padding:"7px 14px",fontSize:13}}>Edit</button>
         <CandidateMenu candidateId={candidate.id} onDelete={id=>{onDelete(id);onBack();}}/>
       </div>
@@ -902,10 +1199,12 @@ function CandidateView({matrix,candidate,onBack,onEdit,onDelete}){
         </div>
         <div style={{flex:1,minWidth:0}}>
           <div style={{color:B.textDark,fontSize:12,fontWeight:700,marginBottom:3}}>Client share link</div>
-          <div style={{color:B.textLight,fontSize:11,fontFamily:"'DM Mono',monospace",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{shareUrl}</div>
+          <div style={{color:B.textLight,fontSize:11,fontFamily:"'DM Mono',monospace",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{shareUrl||"Click \u201cCopy link\u201d to generate a short link"}</div>
         </div>
-        <button onClick={copyLink} style={{...btnPrimary,padding:"8px 16px",fontSize:13,display:"flex",alignItems:"center",gap:6,background:copied?B.green:B.blue,flexShrink:0}}>
-          {copied
+        <button onClick={copyLink} disabled={loading} style={{...btnPrimary,padding:"8px 16px",fontSize:13,display:"flex",alignItems:"center",gap:6,background:copied?B.green:B.blue,flexShrink:0,opacity:loading?0.7:1,cursor:loading?"wait":"pointer"}}>
+          {loading
+            ?<>Generating…</>
+            :copied
             ?<><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="2.5"><path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/></svg>Copied!</>
             :<><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" strokeLinecap="round"/></svg>Copy link</>
           }
@@ -1152,11 +1451,54 @@ function MatrixDetail({matrix,onBack,onEditMatrix,onAddCandidate,onViewCandidate
 }
 
 // ─── APP ──────────────────────────────────────────────────────────────────────
+// Carga un reporte compartido por id corto (?r=) desde Supabase.
+function SharedReportLoader({id}){
+  const [state,setState]=useState({loading:true,payload:null});
+  useEffect(()=>{
+    let alive=true;
+    loadSharedReport(id).then(data=>{if(alive)setState({loading:false,payload:data});});
+    return()=>{alive=false;};
+  },[id]);
+  if(state.loading){
+    return(
+      <div style={{minHeight:"100vh",background:B.bg,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Sora','Segoe UI',sans-serif",color:B.textMid}}>
+        <div style={{textAlign:"center"}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginBottom:12}}><WexpandLogo size={26}/><span style={{color:B.blue,fontWeight:800,fontSize:16}}>wexpand</span></div>
+          <div style={{fontSize:14}}>Loading evaluation…</div>
+        </div>
+      </div>
+    );
+  }
+  if(!state.payload){
+    return(
+      <div style={{minHeight:"100vh",background:B.bg,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Sora','Segoe UI',sans-serif",color:B.textMid,padding:24}}>
+        <div style={{textAlign:"center",maxWidth:360}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginBottom:14}}><WexpandLogo size={26}/><span style={{color:B.blue,fontWeight:800,fontSize:16}}>wexpand</span></div>
+          <div style={{fontSize:16,fontWeight:800,color:B.textDark,marginBottom:6}}>Evaluation not found</div>
+          <div style={{fontSize:13,lineHeight:1.5}}>This link may have expired or is invalid. Please ask for a new one.</div>
+        </div>
+      </div>
+    );
+  }
+  return <CandidateReport payload={state.payload}/>;
+}
+
 export default function App(){
-  const [sharePayload]=useState(()=>{
-    try{const p=new URLSearchParams(window.location.search);const r=p.get("share");if(r) return JSON.parse(decodeURIComponent(escape(atob(r))));}catch{}return null;
+  // Detecta el modo "reporte compartido" desde la URL:
+  // ?r=<id>  → link corto (datos en Supabase)
+  // ?share=  → link largo legacy (datos embebidos en la URL); sigue funcionando.
+  const [shareMode]=useState(()=>{
+    try{
+      const p=new URLSearchParams(window.location.search);
+      const rid=p.get("r");
+      if(rid) return {type:"short",id:rid};
+      const legacy=p.get("share");
+      if(legacy) return {type:"legacy",payload:JSON.parse(decodeURIComponent(escape(atob(legacy))))};
+    }catch{}
+    return null;
   });
-  if(sharePayload) return <CandidateReport payload={sharePayload}/>;
+  if(shareMode?.type==="short") return <SharedReportLoader id={shareMode.id}/>;
+  if(shareMode?.type==="legacy") return <CandidateReport payload={shareMode.payload}/>;
 
   const [matrices,setMatrices]=useState([DEFAULT_MATRIX]);
   const [view,setView]=useState("home");
@@ -1214,14 +1556,18 @@ export default function App(){
 
       <div style={{padding:"32px 40px",flex:1,width:"100%",boxSizing:"border-box"}}>
         {view==="home"&&<Home matrices={matrices} onSelect={id=>{setActiveMatrixId(id);setView("detail");}} onCreate={()=>{setActiveMatrixId(null);setView("newMatrix");}} onDelete={handleDeleteMatrix} onStatusChange={handleStatusChange}/>}
-        {view==="newMatrix"&&(
-          <><div style={{marginBottom:24}}><h2 style={{margin:0,color:B.textDark,fontSize:24,fontWeight:900}}>New Evaluation Matrix</h2><p style={{color:B.textMid,margin:"5px 0 0",fontSize:14}}>Enter the position number, client and name, then define the criteria.</p></div>
-          <MatrixBuilder matrix={null} onSave={handleSaveMatrix} onCancel={()=>setView("home")}/></>
-        )}
-        {view==="editMatrix"&&activeMatrix&&(
-          <><div style={{marginBottom:24}}><h2 style={{margin:0,color:B.textDark,fontSize:24,fontWeight:900}}>Edit Matrix</h2></div>
-          <MatrixBuilder matrix={activeMatrix} onSave={handleSaveMatrix} onCancel={()=>setView("detail")}/></>
-        )}
+        {(view==="newMatrix"||view==="editMatrix")&&(()=>{
+          const existingClients=Array.from(new Set(matrices.map(m=>m.clientName||"").filter(Boolean))).sort((a,b)=>a.localeCompare(b));
+          if(view==="newMatrix") return(
+            <><div style={{marginBottom:24}}><h2 style={{margin:0,color:B.textDark,fontSize:24,fontWeight:900}}>New Evaluation Matrix</h2><p style={{color:B.textMid,margin:"5px 0 0",fontSize:14}}>Enter the position number, client and name, then define the criteria.</p></div>
+            <MatrixBuilder matrix={null} onSave={handleSaveMatrix} onCancel={()=>setView("home")} existingClients={existingClients}/></>
+          );
+          if(activeMatrix) return(
+            <><div style={{marginBottom:24}}><h2 style={{margin:0,color:B.textDark,fontSize:24,fontWeight:900}}>Edit Matrix</h2></div>
+            <MatrixBuilder matrix={activeMatrix} onSave={handleSaveMatrix} onCancel={()=>setView("detail")} existingClients={existingClients}/></>
+          );
+          return null;
+        })()}
         {view==="detail"&&activeMatrix&&<MatrixDetail matrix={activeMatrix} onBack={()=>setView("home")} onEditMatrix={()=>setView("editMatrix")} onAddCandidate={()=>{setActiveCandidateId(null);setView("newCandidate");}} onViewCandidate={c=>{setViewingCandidateId(c.id);setView("candidateView");}} onDeleteCandidate={handleDeleteCandidate} onStatusChange={handleStatusChange}/>}
         {view==="candidateView"&&activeMatrix&&viewingCandidate&&(
           <CandidateView
