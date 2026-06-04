@@ -884,9 +884,16 @@ function buildReportHTML(matrix,candidate){
     @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800;900&family=DM+Mono:wght@400;500&display=swap');
     *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     body{font-family:'Sora','Segoe UI',sans-serif;color:${B.textDark};background:#fff}
-    /* Wrappers para paginación bloque-por-bloque en PDF */
+    /* Wrappers para paginación bloque-por-bloque en PDF.
+       El padding-bottom de cada bloque crea el espaciado visual entre cards
+       (que html2canvas captura como parte del bloque). */
     .block-wrap{width:100%}
     .block-inner{max-width:730px;margin:0 auto;padding:0 24px}
+    [data-pdf-block="header"]{padding-bottom:18px}
+    [data-pdf-block="section-label"]{padding-bottom:6px}
+    [data-pdf-block="cat"]{padding-bottom:14px}
+    [data-pdf-block="legend"]{padding-bottom:18px}
+    [data-pdf-block="footer"]{padding-bottom:0}
     .hero{background:linear-gradient(135deg,${B.blue} 60%,#1a6fd4);padding:30px 40px 50px;color:#fff}
     .brand{display:flex;align-items:center;gap:8px;margin-bottom:24px;font-weight:900;font-size:15px}
     .pill{background:${B.orange};color:#fff;border-radius:20px;padding:2px 12px;font-size:11px;font-weight:800}
