@@ -958,15 +958,117 @@ function buildReportHTML(matrix,candidate){
   </body></html>`;
 }
 
-function downloadReportPDF(matrix,candidate){
+// Carga las librerías de PDF desde CDN una sola vez (cacheadas en window).
+function loadPdfLibs(){
+  if(window._pdfLibsPromise) return window._pdfLibsPromise;
+  function loadScript(src){
+    return new Promise((resolve,reject)=>{
+      const s=document.createElement("script");
+      s.src=src;s.onload=resolve;s.onerror=reject;
+      document.head.appendChild(s);
+    });
+  }
+  window._pdfLibsPromise=Promise.all([
+    loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"),
+    loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"),
+  ]);
+  return window._pdfLibsPromise;
+}
+
+// Genera y descarga directamente el PDF del reporte (sin diálogo de impresión).
+// El usuario ve cómo se descarga el archivo con el nombre del candidato.
+async function downloadReportPDF(matrix,candidate){
+  try{
+    await loadPdfLibs();
+  }catch(e){
+    console.error("Failed to load PDF libs",e);
+    alert("Could not load PDF generator. Please check your internet connection.");
+    return;
+  }
+
+  // Renderiza el HTML del reporte en un contenedor oculto a 794px (A4 a 96dpi).
   const html=buildReportHTML(matrix,candidate);
-  const w=window.open("","_blank");
-  if(!w){alert("Please allow pop-ups to download the PDF.");return;}
-  w.document.open();
-  w.document.write(html);
-  w.document.close();
-  // Espera a que carguen las fuentes antes de abrir el diálogo de impresión.
-  w.onload=()=>{setTimeout(()=>{w.focus();w.print();},400);};
+  const container=document.createElement("div");
+  container.style.cssText="position:fixed;left:-99999px;top:0;width:794px;background:#fff;z-index:-1;";
+  // Extrae solo el body del HTML construido
+  const bodyMatch=html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+  const styleMatch=html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+  if(styleMatch){
+    const style=document.createElement("style");
+    style.textContent=styleMatch[1];
+    container.appendChild(style);
+  }
+  const inner=document.createElement("div");
+  inner.innerHTML=bodyMatch?bodyMatch[1]:html;
+  container.appendChild(inner);
+  document.body.appendChild(container);
+
+  try{
+    // Espera a que las fuentes y el layout estén listos.
+    if(document.fonts&&document.fonts.ready) await document.fonts.ready;
+    await new Promise(r=>setTimeout(r,250));
+
+    // Captura todo el contenido como un canvas en alta resolución.
+    const canvas=await window.html2canvas(container,{
+      scale:2,
+      useCORS:true,
+      backgroundColor:"#ffffff",
+      logging:false,
+      windowWidth:794,
+    });
+
+    // Crea el PDF A4 y trocea el canvas en páginas, buscando zonas blancas para
+    // cortes limpios (evita partir tarjetas a la mitad).
+    const {jsPDF}=window.jspdf;
+    const pdf=new jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
+    const pdfW=210,pdfH=297;
+    const pxPerMm=canvas.width/pdfW;
+    const pageHeightPx=Math.floor(pdfH*pxPerMm);
+
+    // Helper: detecta si una fila del canvas es enteramente "blanca" (segura para cortar)
+    const ctx=canvas.getContext("2d");
+    function isWhiteRow(y){
+      if(y<0||y>=canvas.height) return false;
+      const data=ctx.getImageData(0,y,canvas.width,1).data;
+      for(let i=0;i<data.length;i+=4){
+        if(data[i]<248||data[i+1]<248||data[i+2]<248) return false;
+      }
+      return true;
+    }
+
+    let yStart=0;
+    let pageIndex=0;
+    while(yStart<canvas.height){
+      let yEnd=Math.min(yStart+pageHeightPx,canvas.height);
+      // Si no es la última página, retrocede hasta encontrar una zona blanca segura
+      if(yEnd<canvas.height){
+        let safe=yEnd;
+        const minSafe=yStart+Math.floor(pageHeightPx*0.5); // no retroceder más de la mitad
+        while(safe>minSafe&&!isWhiteRow(safe)) safe--;
+        if(safe>minSafe) yEnd=safe;
+      }
+      const sliceHeight=yEnd-yStart;
+      // Crea un canvas temporal con la porción de esta página
+      const pageCanvas=document.createElement("canvas");
+      pageCanvas.width=canvas.width;
+      pageCanvas.height=sliceHeight;
+      pageCanvas.getContext("2d").drawImage(canvas,0,yStart,canvas.width,sliceHeight,0,0,canvas.width,sliceHeight);
+      const imgData=pageCanvas.toDataURL("image/jpeg",0.92);
+      const imgHmm=sliceHeight/pxPerMm;
+      if(pageIndex>0) pdf.addPage();
+      pdf.addImage(imgData,"JPEG",0,0,pdfW,imgHmm);
+      yStart=yEnd;
+      pageIndex++;
+    }
+
+    const safeName=(candidate.name||"candidate").replace(/[^\w\s-]/g,"").replace(/\s+/g,"_");
+    pdf.save(`${safeName}_Evaluation.pdf`);
+  }catch(e){
+    console.error("PDF generation failed",e);
+    alert("Could not generate PDF. Please try again.");
+  }finally{
+    document.body.removeChild(container);
+  }
 }
 
 // ─── SHARE MODAL ──────────────────────────────────────────────────────────────
