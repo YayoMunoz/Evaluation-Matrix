@@ -869,11 +869,16 @@ function CandidateReport({payload}){
   const r=42,circ=2*Math.PI*r;
   return(
     <div style={{minHeight:"100vh",background:B.bg,fontFamily:"'Sora','Segoe UI',sans-serif"}}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800;900&family=DM+Mono:wght@400;500&display=swap');*{box-sizing:border-box}`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800;900&family=DM+Mono:wght@400;500&display=swap');*{box-sizing:border-box}@media print{.no-print{display:none!important}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}`}</style>
       <div style={{background:`linear-gradient(135deg,${B.blue} 60%,#1a6fd4)`,padding:"32px 40px 52px"}}>
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:32}}>
           <WexpandLogo size={30}/><span style={{color:B.white,fontWeight:900,fontSize:15}}>wexpand</span>
           <span style={{background:B.orange,color:B.white,borderRadius:20,padding:"2px 12px",fontSize:11,fontWeight:800,marginLeft:4}}>Recruitment</span>
+          <button className="no-print" onClick={()=>window.print()}
+            style={{marginLeft:"auto",background:B.white,color:B.blue,border:"none",borderRadius:8,padding:"8px 18px",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
+            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            Download PDF
+          </button>
         </div>
         <div style={{color:"#ffffff88",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:2,marginBottom:8}}>Candidate Evaluation Report</div>
         <h1 style={{color:B.white,margin:"0 0 14px",fontSize:34,fontWeight:900,letterSpacing:-0.5}}>{candidate.name}</h1>
