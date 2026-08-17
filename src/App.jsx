@@ -1012,6 +1012,10 @@ function CandidateView({matrix,candidate,onBack,onEdit,onDelete}){
             :<><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" strokeLinecap="round"/></svg>Copy link</>
           }
         </button>
+        <button onClick={()=>window.open(shareUrl,'_blank')} style={{...btnSecondary,padding:"8px 16px",fontSize:13,display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          Download PDF
+        </button>
       </div>
 
       {/* Global score */}
